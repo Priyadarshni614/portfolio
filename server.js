@@ -1,23 +1,29 @@
-// server.js
+// server.js - MERGED (Nodemailer + MongoDB/Mongoose)
+
 require('dotenv').config();
 const express = require('express');
 const nodemailer = require('nodemailer');
 const path = require('path');
+
+// --- Database Imports (Sequelize/Postgres) ---
+const { connectDB } = require('./config/db');
+const Message = require('./models/Message');
+
+// --- Initialize and Connect Database ---
+connectDB();
+
 const app = express();
+const port = process.env.PORT || 999; 
 
-// --- Middlewares ---
-// Serve static files (your HTML, CSS, images) from the 'public' folder
+// --- Express Middlewares ---
+// Serve static files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
-// Middleware to parse incoming form data
-app.use(express.urlencoded({ extended: true }));
+// Middleware to parse incoming JSON data (from frontend fetch)
 app.use(express.json());
+// Middleware to parse URL-encoded data (traditional form data)
+app.use(express.urlencoded({ extended: true }));
 
-// Optional explicit route (not required if using express.static)
-app.get('/certifications', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'certifications.html'));
-});
-
-// --- NodeMailer Transporter Setup ---
+// --- Nodemailer Transporter Setup ---
 const transporter = nodemailer.createTransport({
     service: 'gmail', 
     auth: {
@@ -30,16 +36,31 @@ const transporter = nodemailer.createTransport({
 app.post('/send-email', async (req, res) => {
     const { name, email, message } = req.body;
 
-    // 1. Basic validation
+    // 1. Basic Validation
     if (!name || !email || !message) {
         return res.status(400).send('All fields are required.');
     }
 
-    // 2. Email content preparation
+    // 2. Database Saving Logic (New Feature)
+    try {
+        await Message.create({
+            name,
+            email,
+            message
+        });
+        console.log(`[DB] Message saved successfully from: ${name}`);
+    } catch (dbError) {
+        console.error('[DB ERROR] Failed to save message:', dbError);
+        // You can still try to send the email, but warn the admin.
+        // Or, you can return an error here if saving is critical:
+        // return res.status(500).send('Database connection failed.'); 
+    }
+
+    // 3. Email Sending Logic
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: process.env.RECIPIENT_EMAIL, 
-        subject: `New Contact from Portfolio: ${name}`,
+        subject: `[Portfolio] New Contact from: ${name}`,
         html: `
             <h3>New Contact Form Submission</h3>
             <p><strong>Name:</strong> ${name}</p>
@@ -49,34 +70,34 @@ app.post('/send-email', async (req, res) => {
         `
     };
 
-    // 3. Send email
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`Email successfully sent from ${name}.`);
+        console.log(`[Email] Email successfully sent to admin.`);
 
-        // Success response with client-side alert and redirect
-        res.send(`
+        // Success response
+        res.status(200).send(`
             <!DOCTYPE html>
             <html>
             <head><title>Success</title><meta http-equiv="refresh" content="3;url=/index.html#contact"></head>
-            <body>
+            <body style="background: #0d0c24; color: #f3f3f3; font-family: sans-serif; text-align: center; padding-top: 50px;">
                 <script>alert('Thank you for your message! I will get back to you soon.');</script>
-                <h1>Message Sent Successfully!</h1>
-                <p>Redirecting back to the contact page in 3 seconds...</p>
+                <h1>✅ Message Sent Successfully!</h1>
+                <p>Your message was saved to the database and sent via email.</p>
+                <p>Redirecting back to the portfolio in 3 seconds...</p>
             </body>
             </html>
         `);
-    } catch (error) {
-        console.error('Error sending email:', error);
+    } catch (emailError) {
+        console.error('[EMAIL ERROR] Error sending email:', emailError);
+        // Error response (retains the database logic, only email failed)
         res.status(500).send(`
             <!DOCTYPE html>
             <html>
             <head><title>Error</title><meta http-equiv="refresh" content="5;url=/index.html#contact"></head>
-            <body>
-                <script>alert('Failed to send message. Please try emailing directly.');</script>
-                <h1>Email Sending Failed</h1>
-                <p>An error occurred. Please try again later or email me directly.</p>
-                <p>Redirecting in 5 seconds...</p>
+            <body style="background: #0d0c24; color: #f3f3f3; font-family: sans-serif; text-align: center; padding-top: 50px;">
+                <script>alert('Failed to send message via email, but it was SAVED to the database.');</script>
+                <h1>⚠️ Submission Error</h1>
+                <p>An error occurred while sending the email. Message was still saved. Redirecting in 5 seconds...</p>
             </body>
             </html>
         `);
@@ -84,8 +105,7 @@ app.post('/send-email', async (req, res) => {
 });
 
 // --- Server Startup ---
-const port = 999;
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
-    console.log('Portfolio ready. Test the contact form!');
+    console.log('Portfolio backend ready.');
 });

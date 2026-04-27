@@ -9,7 +9,7 @@
     --text-dark: #1a1a1a;
     --text-light: #f3f3f3;
     --bg-light: #ffffff;
-    --bg-dark: #0f0f17;
+    --bg-dark: #0d0c24; /* Updated: Dark indigo base */
     --bg-secondary-dark: #16122d; /* Alternating Shade */
     
     /* Glassmorphic Effects */
@@ -17,9 +17,9 @@
     --glass-blur: blur(12px);
     --shadow-soft: 0px 8px 25px rgba(0, 0, 0, 0.15);
     --transition: all 0.3s ease;
+    --grid-line-color: rgba(77, 191, 255, 0.05); /* Very subtle grid */
     
     --max-width: 1200px;
-    --grid-line-color: rgba(77, 191, 255, 0.08);
 }
 
 * {
@@ -32,20 +32,47 @@ html {
     scroll-behavior: smooth;
 }
 
+/* BODY: Merge background colors for a rich, blue/purple base (The Splash Effect) */
 body {
-    background: var(--bg-dark);
+    background-color: var(--bg-dark);
     color: var(--text-light);
     font-family: 'Poppins', sans-serif;
     line-height: 1.6;
     overflow-x: hidden;
     
-    /* Grid Background */
-    background-color: var(--bg-dark);
+    /* MERGED BACKGROUND: Subtle Radial Gradient (This creates the splash effect everywhere) */
     background-image: 
-        linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
-    background-size: 50px 50px; 
+        radial-gradient(at 10% 20%, rgba(107, 77, 255, 0.1) 0%, transparent 40%), /* Soft Purple Glow */
+        radial-gradient(at 90% 80%, rgba(0, 212, 255, 0.08) 0%, transparent 45%); /* Soft Cyan Glow */
+        
+    background-attachment: fixed; /* Ensures the glow stays in place */
+}
+
+/* OPT-IN DIAGONAL GRID: This class will be applied to specific sections in HTML */
+.with-grid {
+    background-image:
+        /* Layer 1: Subtle Horizontal Lines */
+        linear-gradient(0deg, var(--grid-line-color) 1px, transparent 1px),
+        /* Layer 2: Subtle Vertical Lines */
+        linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px),
+        /* Layer 3: Diagonal Grid Lines (45deg) */
+        linear-gradient(45deg, rgba(77, 191, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(77, 191, 255, 0.03) 1px, transparent 1px),
+        /* Layer 4: The Merged Splash Background */
+        radial-gradient(at 10% 20%, rgba(107, 77, 255, 0.1) 0%, transparent 40%), 
+        radial-gradient(at 90% 80%, rgba(0, 212, 255, 0.08) 0%, transparent 45%); 
+    
+    /* Define size for all gradient layers */
+    background-size: 
+        100% 60px,      /* Horizontal lines */
+        60px 100%,      /* Vertical lines */
+        50px 50px,      /* Diagonal 45deg */
+        50px 50px,      /* Diagonal 135deg */
+        100% 100%,      /* Splash 1 */
+        100% 100%;      /* Splash 2 */
+    
     background-attachment: fixed; 
+    background-color: transparent;
 }
 
 /* --- Keyframe Animations --- */
